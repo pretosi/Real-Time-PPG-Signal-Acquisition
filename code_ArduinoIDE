@@ -1,0 +1,44 @@
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+#define SENSOR_PIN A0  // Pulse Sensor connected to A0
+#define I2C_ADDR 0x27  // Change if LCD has a different I2C address
+LiquidCrystal_I2C lcd(I2C_ADDR, 16, 2);  // Initialize LCD
+
+int sensorValue = 0;
+const int sampleSize = 100;
+int beatCount = 0;
+unsigned long lastBeatTime = 0;
+
+void setup() {
+    Serial.begin(115200);
+    lcd.init();
+    lcd.backlight();
+    lcd.setCursor(0, 0);
+    lcd.print("BPM: ");
+}
+void loop() {
+    sensorValue = analogRead(SENSOR_PIN); // Read PPG signal
+    Serial.println(sensorValue); // Send data to Serial Plotter
+    // Detect heartbeat using a threshold
+    static int threshold = 520;  // Adjust based on your sensor readings
+    static bool pulseDetected = false;
+    unsigned long currentTime = millis();
+    if (sensorValue > threshold && !pulseDetected) {
+        pulseDetected = true;
+        beatCount++;
+
+        if (lastBeatTime > 0) {
+            float bpm = 60000.0 / (currentTime - lastBeatTime); // Convert to BPM
+            lcd.setCursor(5, 0);
+            lcd.print("    "); // Clear previous BPM value
+            lcd.setCursor(5, 0);
+            lcd.print((int)bpm);
+        }
+        lastBeatTime = currentTime;
+    }
+
+    if (sensorValue < threshold) {
+        pulseDetected = false;
+    }
+    delay(30);  // Sampling rate for better visualization
+}
